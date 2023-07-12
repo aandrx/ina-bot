@@ -162,4 +162,4 @@ cython_debug/
 ffmpeg/
 
 # config.json
-.json
+config.json
