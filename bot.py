@@ -22,7 +22,6 @@ else:
 
 
 from discord.ext import commands
-#from ytdl import run_ytdl
 from commands import run_commands
 from dotenv import load_dotenv
 
@@ -60,6 +59,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = Bot(
+    #command_prefix=(config["prefix"]),
     command_prefix=commands.when_mentioned_or(config["prefix"]),
     intents=intents,
     help_command=None,
@@ -116,6 +116,8 @@ bot.logger = logger
 
 bot.config = config
 
+client = discord.Client(intents=intents)
+
 @bot.event
 async def on_ready() -> None:
     bot.logger.info(f"Logged in as {bot.user.name}")
@@ -141,14 +143,22 @@ async def status_task() -> None:
 async def on_message(message: discord.Message) -> None:
     """
     The code in this event is executed every time someone sends a message, with or without the prefix
-
     :param message: The message that was sent.
     """
     if message.author == bot.user or message.author.bot:
         return
     await bot.process_commands(message)
+    
+@bot.event
+async def on_member_join(member):
+    await member.create_dm()
+    await member.dm_channel.send(
+        f"Hi {member.name}, welcome to private school lmfao \ndont be stupid"
+    )
 
-@bot.command()
+# bot commands (raw on command)
+
+@bot.command(pass_context=True)
 async def foo(ctx, arg):
     await ctx.send(arg)
     
@@ -161,56 +171,57 @@ async def greet(ctx):
 async def esex(ctx):
     username = ctx.message.author.display_name
     await ctx.send("{username} loves esex!!")
-    
-@bot.command()
-async def echo(ctx, *, message):
-    await ctx.delete()
-    await ctx.send(message, delete_after=20)
-    
-@bot.event
-async def on_message(message):
-    if message.author == client.user:
-        return 
 
-    username = str(message.author)
-    user_message = str(message.content)
-    channel = str(message.channel)
-    
-client = discord.Client(intents=intents)
+@bot.command(
+    pass_context=True,
+    help = "this is help",
+    description = "this is desc",
+    brief = "this is brief"
+)
+async def ping(ctx):
+    await ctx.send("pong")
+
+# @bot.event
+# async def on_message(message):
+#     if message.author == client.user:
+#         return 
+
+#     username = str(message.author)
+#     user_message = str(message.content)
+#     channel = str(message.channel)
+
+
+# bot event commands (on message)
+
 @bot.event
 async def on_message(message):
+    if message.content.startswith(config["prefix"]+"help"):
+        channel = message.channel
+        username = str(message.author.display_name)
+        await channel.send(f"{username} needs help lmfaoooo!")
+        await channel.send("`help desk L`")
+        
     if message.content.startswith(config["prefix"]+"hello"):
         channel = message.channel
         username = str(message.author.display_name)
         await channel.send(f"Hello {username}!")
 
-        def check(m):
-            return m.content == 'hello' and m.channel == channel
-
-        msg = await client.wait_for('message', check=check)
-        await channel.send(f'Hello {msg.author}!')
-
-    if message.content.startswith('$hug'):
+    if message.content.startswith(config["prefix"]+"hug"):
         channel = message.channel
         username = str(message.author.display_name)
         await channel.send(f"luv u {username}!")
         
-        def check(m):
-            return m.content == 'hello' and m.channel == channel
-        
-        msg = await client.wait_for('message', check=check)
-        await channel.send(f'luv u {msg.author}!')
-        
-    if message.content.startswith('$esex'):
+    if message.content.startswith(config["prefix"]+"esex"):
         channel = message.channel
         username = str(message.author.display_name)
         await channel.send(f"{username} loves esex!")
-        
-        def check(m):
-            return m.content == 'hello' and m.channel == channel
-        
-        msg = await client.wait_for('message', check=check)
-        await channel.send(f'hello{msg.author}!')
+    
+    if message.content.startswith(config["prefix"]+"roll"):
+        channel = message.channel
+        username = str(message.author.display_name)
+        await channel.send(f"{username} rolled " + str(random.randint(1, 6))+"!")
+
+
 
 @bot.event
 async def on_command_completion(context: Context) -> None:
@@ -335,32 +346,7 @@ bot.run(config['token'])
 #         print(e)
 
 
-
-#logger = settings.logging.getLogger("client")
-
-
-# load_dotenv()
-# def run_discord_bot():
-#     TOKEN = os.getenv('DISCORD_TOKEN')
-#     intents = discord.Intents.default()
-#     intents.message_content = True
-#     discord.Intents.all()
-#     client = discord.Client(intents=intents)
-#     bot = commands.Bot(command_prefix='$', intents=intents)
-    
-#     run_ytdl()
-    
-#     @client.event
-#     async def on_ready():
-#         logger.info(f"User: {client.user}(ID:{client.user.id}")
-#         print(f'{client.user} is now running!')
-    
-#     @client.event
-#     async def on_member_join(member):
-#         await member.create_dm()
-#         await member.dm_channel.send(
-#             f"Hi {member.name}, welcome to private school lmfao"
-#         )
+#     
     
 #     run_commands()
 
