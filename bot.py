@@ -10,7 +10,9 @@ import json
 
 import discord
 from discord.ext import commands, tasks
+from discord.ext import commands
 from discord.ext.commands import Bot, Context
+from discord import app_commands
 
 import exceptions
 
@@ -21,7 +23,6 @@ else:
         config = json.load(file)
 
 
-from discord.ext import commands
 from commands import run_commands
 from dotenv import load_dotenv
 
@@ -59,11 +60,16 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = Bot(
-    #command_prefix=(config["prefix"]),
+    #command_prefix=("$"),
     command_prefix=commands.when_mentioned_or(config["prefix"]),
     intents=intents,
     help_command=None,
 )
+
+
+# bot = commands.Bot(command_prefix="$", 
+#                    intents = discord.Intents.all()
+#                    )
 
 class LoggingFormatter(logging.Formatter):
     # Colors
@@ -94,7 +100,6 @@ class LoggingFormatter(logging.Formatter):
         format = format.replace("(green)", self.green + self.bold)
         formatter = logging.Formatter(format, "%Y-%m-%d %H:%M:%S", style="{")
         return formatter.format(record)
-
 
 logger = logging.getLogger("discord_bot")
 logger.setLevel(logging.INFO)
@@ -129,6 +134,16 @@ async def on_ready() -> None:
     if config["sync_commands_globally"]:
         bot.logger.info("Syncing commands globally...")
         await bot.tree.sync()
+    try: 
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} command(s)")
+    except Exception as e: 
+        print(e)
+
+async def load():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            await client.load_extension(f"cogs.{filename[:-3]}")
 
 @tasks.loop(minutes=1.0)
 async def status_task() -> None:
@@ -163,7 +178,7 @@ async def foo(ctx, arg):
     await ctx.send(arg)
     
 @bot.command(pass_context=True)
-async def greet(ctx):
+async def greet(ctx, *, message):
     username = ctx.message.author.display_name
     await ctx.send("hey {username}")
     
@@ -181,12 +196,34 @@ async def esex(ctx):
 async def ping(ctx):
     await ctx.send("pong")
 
+# slash commands
+
+@bot.tree.command(name="hello")
+async def hello(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Hey {interaction.user.mention}! This is a slash command!", ephemeral=True)
+    
+@bot.tree.command(name="say")
+@app_commands.describe(thing_to_say = "what should i say?")
+async def say(interaction: discord.Interaction, thing_to_say: str):
+    await interaction.response.send_message(f"{interaction.user.name} said: `{thing_to_say}`")
+    
+@bot.tree.command(name="esex")
+@app_commands.describe(arg = "who?")
+async def say(interaction: discord.Interaction, arg: str):
+    await interaction.response.send_message(f"`{arg}` loves esex!")
+
+@bot.tree.command(name="league")
+@app_commands.describe(arg = "who?")
+async def say(interaction: discord.Interaction, arg: str):
+    await interaction.response.send_message(f"`{arg}` wip")
+
+
 # @bot.event
 # async def on_message(message):
 #     if message.author == client.user:
 #         return 
 
-#     username = str(message.author)
+#     username = str(message.author) 
 #     user_message = str(message.content)
 #     channel = str(message.channel)
 
@@ -221,19 +258,22 @@ async def on_message(message):
         username = str(message.author.display_name)
         await channel.send(f"{username} rolled " + str(random.randint(1, 6))+"!")
 
-
+    if message.content.startswith(config["prefix"]+"esex2"+""):
+        channel = message.channel
+        username = str(message.author.display_name)
+        author = message.author.mention
+        await channel.send(f"{author}")
 
 @bot.event
 async def on_command_completion(context: Context) -> None:
     """
     The code in this event is executed every time a normal command has been *successfully* executed.
-
     :param context: The context of the command that has been executed.
     """
     full_command_name = context.command.qualified_name
     split = full_command_name.split(" ")
     executed_command = str(split[0])
-        
+    
     if context.guild is not None:
         bot.logger.info(
             f"Executed {executed_command} command in {context.guild.name} (ID: {context.guild.id}) by {context.author} (ID: {context.author.id})"
@@ -320,7 +360,7 @@ async def on_command_error(context: Context, error) -> None:
         await context.send(embed=embed)
     else:
         raise error
-    
+
 async def load_cogs() -> None:
     """
     The code in this function is executed whenever the bot will start.
@@ -336,71 +376,8 @@ async def load_cogs() -> None:
                 bot.logger.error(f"Failed to load extension {extension}\n{exception}")
 
 asyncio.run(load_cogs())
+asyncio.run(load())
 bot.run(config['token'])
-
-# async def send_message(message, user_message, is_private):
-#     try:
-#         response = responses.get_response(user_message)
-#         await message.author.send(responses) if is_private else await message.channel.send(response)
-#     except Exception as e:
-#         print(e)
-
-
-#     
-    
-#     run_commands()
-
-#     # @client.event
-#     # async def on_message(message):
-#     #     if message.author == client.user:
-#     #         return 
-    
-#     #     username = str(message.author)
-#     #     user_message = str(message.content)
-#     #     channel = str(message.channel)
-        
-#     #     print(f"{username} said: '{user_message}' {{channel}}")
-        
-#     #     if user_message[0] == '?':
-#     #         user_message = user_message[1:]
-#     #         await send_message(message, user_message, is_private=True)
-#     #     else: 
-#     #         await send_message(message, user_message, is_private=False)
-    
-#     # @client.event
-#     # async def on_message(message):
-#     #     if message.content.startswith('$greet'):
-#     #         channel = message.channel
-#     #         username = str(message.author)
-#     #         await channel.send(f"Hello {username}!")
-
-#     #         def check(m):
-#     #             return m.content == 'hello' and m.channel == channel
-
-#     #         msg = await client.wait_for('message', check=check)
-#     #         await channel.send(f'Hello {msg.author}!')
-
-#     #     if message.content.startswith('$hug'):
-#     #         channel = message.channel
-#     #         username = str(message.author)
-#     #         await channel.send(f"luv u {username}!")
-            
-#     #         def check(m):
-#     #             return m.content == 'hello' and m.channel == channel
-            
-#     #         msg = await client.wait_for('message', check=check)
-#     #         await channel.send(f'luv u {msg.author}!')
-            
-#     #     if message.content.startswith('$esex'):
-#     #         channel = message.channel
-#     #         username = str(message.author)
-#     #         await channel.send(f"{username} loves esex!")
-            
-#     #         def check(m):
-#     #             return m.content == 'hello' and m.channel == channel
-            
-#     #         msg = await client.wait_for('message', check=check)
-#     #         await channel.send(f'hello{msg.author}!')
 
 #         # @bot.command(
 #         #     aliases = ['p'],
