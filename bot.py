@@ -22,7 +22,6 @@ else:
     with open(f"{os.path.realpath(os.path.dirname(__file__))}/config.json") as file:
         config = json.load(file)
 
-
 from commands import run_commands
 from dotenv import load_dotenv
 
@@ -59,17 +58,16 @@ intents = discord.Intents.default()
 
 intents.message_content = True
 
+#bot = commands.Bot(command_prefix = "$", intents = discord.Intents.all())
+
 bot = Bot(
     #command_prefix=("$"),
-    command_prefix=commands.when_mentioned_or(config["prefix"]),
+    command_prefix=(config["prefix"]),
+    #command_prefix=commands.when_mentioned_or(config["prefix"]),
     intents=intents,
     help_command=None,
 )
 
-
-# bot = commands.Bot(command_prefix="$", 
-#                    intents = discord.Intents.all()
-#                    )
 
 class LoggingFormatter(logging.Formatter):
     # Colors
@@ -123,6 +121,17 @@ bot.config = config
 
 client = discord.Client(intents=intents)
 
+#discord buttons testing
+class InviteButtons(discord.ui.View):
+    def __init__(self, inv: str):
+        super().__init__()
+        self.inv = inv
+        self.add_item(discord.ui.Button(label="Invite link", url=self.inv))
+    
+    @discord.ui.button(label="Invite Btn", style=discord.ButtonStyle.blurple)
+    async def inviteBtn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(self.inv, ephemeral=True)
+
 @bot.event
 async def on_ready() -> None:
     bot.logger.info(f"Logged in as {bot.user.name}")
@@ -140,10 +149,12 @@ async def on_ready() -> None:
     except Exception as e: 
         print(e)
 
+"""
 async def load():
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
             await client.load_extension(f"cogs.{filename[:-3]}")
+"""
 
 @tasks.loop(minutes=1.0)
 async def status_task() -> None:
@@ -195,6 +206,12 @@ async def esex(ctx):
 )
 async def ping(ctx):
     await ctx.send("pong")
+    
+@bot.command()
+async def invite(ctx: commands.Context):
+    inv = await ctx.channel.create_intvite()
+    await ctx.send("Click the buttons below to invite someone!", view=InviteButtons(str(inv)))
+
 
 # slash commands
 
@@ -375,20 +392,6 @@ async def load_cogs() -> None:
                 exception = f"{type(e).__name__}: {e}"
                 bot.logger.error(f"Failed to load extension {extension}\n{exception}")
 
-asyncio.run(load_cogs())
-asyncio.run(load())
+###asyncio.run(load_cogs())
+###asyncio.run(load())
 bot.run(config['token'])
-
-#         # @bot.command(
-#         #     aliases = ['p'],
-#         #     help = "This is help",
-#         #     description = "This is description",
-#         #     brief = "This is brief",
-#         #     enabled = True,
-#         #     hidden = True
-#         # )
-#         # async def ping(ctx):
-#         #     """Answers with pong"""
-#         #     await ctx.send("pong")
-    
-#     client.run(TOKEN, root_logger=True)
